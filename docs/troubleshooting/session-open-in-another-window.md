@@ -1,4 +1,4 @@
-# `This chat is open in another Hermes window/terminal` 해결
+# 중복 새션 해결 방법
 
 ## 증상
 
@@ -16,41 +16,32 @@ Use it there, or start a new chat here.
 토큰이 0인 것, VPN을 다시 연결한 것, Hermes 프로필 이름은 이 오류의 직접 원인이 아닙니다.
 
 ## 가장 안전한 해결 순서
+1.명령을 Hermes 입력창(hyunsoung >)에 입력한 것 같습니다. 일반 터미널에서 실행해야 합니다.
+   1. Orca 상단의 +를 누릅니다.
+   2. Terminal을 선택합니다.
+   3. hyunsoung >가 아닌 일반 터미널에서 아래 짧은 명령을 실행하세요.
+ps -u "$(whoami)" -o pid=,etime=,tty=,comm= | grep -i hermes | head -20
 
-1. 예전 Hermes 창에 접근할 수 있으면 그 창에서 `/quit`으로 종료합니다.
-2. 접근할 수 없으면 worker03 터미널에서 내 계정의 Hermes TUI 후보만 확인합니다.
+2. 정확히 확인하려면 일반 터미널에서 실행하세요.
+ps -p 2428475 -o pid=,etime=,tty=,args=
+readlink /proc/2428475/cwd
+   결과가 다음 조건을 모두 만족하면 해당 프로세스가 맞을 가능성이 높습니다.
+- Hermes TUI 명령
+- hyunsoung 프로필
+- test-orca-server 작업 폴더
 
-   ```bash
-   ps -u "$(whoami)" -o pid=,ppid=,etime=,tty=,args= | grep '[u]i-tui/dist/entry.js'
-   ```
-
-3. 오류에 나온 세션 시작 시각과 후보의 실행 시간·터미널(`TTY`)을 비교합니다.
-4. 정확히 일치하는 프로세스 하나를 확인한 뒤 종료합니다.
-
-   ```bash
-   kill <CONFIRMED_TUI_PID>
-   ```
-
-5. 종료 여부를 확인합니다.
-
-   ```bash
-   ps -p <CONFIRMED_TUI_PID>
-   ```
-
-6. Hermes를 다시 열고 기존 세션을 선택합니다.
-
-   ```text
-   /resume
-   ```
-
-## 하지 말아야 할 것
-
-공용 계정에서는 아래와 같이 모든 Hermes 프로세스를 한꺼번에 종료하지 않습니다.
-
-```bash
-killall hermes
-pkill -f hermes
-```
+3. Hermes TUI만 정확히 찾기 위해 일반 터미널에서 다음을 실행하세요.
+ps -u "$(whoami)" -o pid=,ppid=,etime=,tty=,args= | grep '[u]i-tui/dist/entry.js'
+   출력에서 실행 시간이 세션을 실행 시간을 찾으면 됩니다.
+찾았습니다. 기존 채팅을 점유한 TUI는 다음 항목입니다.
+PID: 2428530
+실행 시간: 02:22:25
+터미널: pts/12
+부모 PID: 2428475
+--삭제
+kill 2428530
+--종료 확인
+ps -p 2428530
 
 다른 연구원의 작업까지 종료될 수 있습니다. PID가 확실하지 않다면 종료하지 말고 서버 관리자에게 확인합니다.
 
