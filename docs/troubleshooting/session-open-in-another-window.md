@@ -20,27 +20,41 @@ Use it there, or start a new chat here.
    1. Orca 상단의 +를 누릅니다.
    2. Terminal을 선택합니다.
    3. hyunsoung >가 아닌 일반 터미널에서 아래 짧은 명령을 실행하세요.
+
 ps -u "$(whoami)" -o pid=,etime=,tty=,comm= | grep -i hermes | head -20
 
 2. 정확히 확인하려면 일반 터미널에서 실행하세요.
+
 ps -p 2428475 -o pid=,etime=,tty=,args=
+
 readlink /proc/2428475/cwd
+ 
    결과가 다음 조건을 모두 만족하면 해당 프로세스가 맞을 가능성이 높습니다.
 - Hermes TUI 명령
 - hyunsoung 프로필
 - test-orca-server 작업 폴더
 
 3. Hermes TUI만 정확히 찾기 위해 일반 터미널에서 다음을 실행하세요.
+
 ps -u "$(whoami)" -o pid=,ppid=,etime=,tty=,args= | grep '[u]i-tui/dist/entry.js'
+   
    출력에서 실행 시간이 세션을 실행 시간을 찾으면 됩니다.
 찾았습니다. 기존 채팅을 점유한 TUI는 다음 항목입니다.
+
 PID: 2428530
+
 실행 시간: 02:22:25
+
 터미널: pts/12
+
 부모 PID: 2428475
+
 --삭제
+
 kill 2428530
+
 --종료 확인
+
 ps -p 2428530
 
 다른 연구원의 작업까지 종료될 수 있습니다. PID가 확실하지 않다면 종료하지 말고 서버 관리자에게 확인합니다.
