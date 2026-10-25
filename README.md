@@ -8,6 +8,12 @@
 |---|---|---|
 | Superpowers | 설치 및 슬래시 명령 설정 | [보기](docs/hermes/skills/superpowers.md) |
 
+### 작업 방식
+
+| 주제 | 설명 | 문서 |
+|---|---|---|
+| Hermes Kanban Board | 멀티 에이전트 작업 구조와 운영 흐름 | [보기](docs/hermes/skills/kanban-board.md) |
+
 ### 중복 세션
 
 | 문제 | 설명 | 문서 |
