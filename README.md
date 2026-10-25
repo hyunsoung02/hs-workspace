@@ -1,9 +1,11 @@
-# Orca + Hermes 문제 해결 기록
+# HS-WORKSPACE
 
-## 플러그인
+## ORCA + Hermes 자료
+
+# 플러그인
 
 - [Hermes에 Superpowers 설치 및 슬래시 명령 설정](docs/hermes/skills/superpowers.md)
 
-## 중복 세션
+# 중복 세션
 
 - [`This chat is open in another Hermes window/terminal` 해결](docs/hermes/issues/session-open-in-another-window.md)
