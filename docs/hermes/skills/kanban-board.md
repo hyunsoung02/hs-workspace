@@ -71,10 +71,14 @@ flowchart TD
     C --> Q{작업 결과}
     Q -- 완료 --> DONE[Done]
     Q -- 문제 또는 의존성 --> BLOCKED[Blocked]
-    DONE --> N{후속 Task가 있는가?}
+    DONE --> P{자식의 모든 선행 Task가 Done인가?}
+    P -- 아니오 --> B
+    P -- 예 --> N{후속 Task가 있는가?}
     N -- 예 --> READY[자식 Task를 Ready로 전환]
     READY --> B
-    N -- 아니오 --> F[최종 결과 통합]
+    N -- 아니오 --> A{목표에 필요한 모든 Task가 Done인가?}
+    A -- 아니오 --> B
+    A -- 예 --> F[최종 결과 통합]
     BLOCKED --> H[원인 해결·재시도 또는 사용자 개입]
     H --> B
 ```
@@ -129,7 +133,7 @@ Task는 보드의 기본 작업 단위이다.
 
 ### 5.3 Link
 
-Link는 Task 사이의 의존 관계를 나타낸다. 부모 Task가 끝나야 실행할 수 있는 자식 Task를 연결하는 데 사용한다.
+Link는 Task 사이의 의존 관계를 나타낸다. 자식 Task는 연결된 모든 부모 Task가 `Done` 상태가 된 뒤에야 `Ready` 상태로 전환된다.
 
 예시:
 
