@@ -22,6 +22,11 @@ assignees: ""
 - 목표 완료일:
 - Milestone:
 
+## 테스트 경로 (선택)
+
+<!-- 요청 결과를 검증할 테스트 경로를 적습니다. 예: -->
+<!-- test-path: tests/test_example.py -->
+
 ## 확인 또는 결정이 필요한 사항
 
 
