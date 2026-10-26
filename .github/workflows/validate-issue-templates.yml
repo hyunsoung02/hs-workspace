@@ -1,0 +1,97 @@
+name: Issue Template 검증
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/workflows/validate-issue-templates.yml"
+
+  pull_request:
+    paths:
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/workflows/validate-issue-templates.yml"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Template 구조 및 형식 검사
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: 저장소 코드 가져오기
+        uses: actions/checkout@v6
+
+      - name: Issue Template 검사
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TEMPLATE_DIR=".github/ISSUE_TEMPLATE"
+
+          if [ ! -d "$TEMPLATE_DIR" ]; then
+            echo "::error::.github/ISSUE_TEMPLATE 폴더가 없습니다."
+            exit 1
+          fi
+
+          TEMPLATE_FILES=(
+            "01-research.md"
+            "02-test.md"
+            "03-bug-report.md"
+            "04-documentation.md"
+            "05-professor-request.md"
+          )
+
+          for FILE in "${TEMPLATE_FILES[@]}"; do
+            PATH_TO_FILE="$TEMPLATE_DIR/$FILE"
+
+            if [ ! -f "$PATH_TO_FILE" ]; then
+              echo "::error file=$PATH_TO_FILE::필수 Template 파일이 없습니다."
+              exit 1
+            fi
+
+            echo "검사 중: $PATH_TO_FILE"
+
+            for KEY in name about title labels assignees; do
+              if ! grep -q "^${KEY}:" "$PATH_TO_FILE"; then
+                echo "::error file=$PATH_TO_FILE::${KEY} 항목이 없습니다."
+                exit 1
+              fi
+            done
+
+            FRONT_MATTER_COUNT=$(grep -c '^---$' "$PATH_TO_FILE")
+
+            if [ "$FRONT_MATTER_COUNT" -lt 2 ]; then
+              echo "::error file=$PATH_TO_FILE::YAML front matter가 올바르지 않습니다."
+              exit 1
+            fi
+          done
+
+          CONFIG_FILE="$TEMPLATE_DIR/config.yml"
+
+          if [ ! -f "$CONFIG_FILE" ]; then
+            echo "::error file=$CONFIG_FILE::config.yml 파일이 없습니다."
+            exit 1
+          fi
+
+          if ! grep -qx 'blank_issues_enabled: false' "$CONFIG_FILE"; then
+            echo "::error file=$CONFIG_FILE::blank_issues_enabled 설정이 올바르지 않습니다."
+            exit 1
+          fi
+
+          if ! grep -qx 'contact_links: \[\]' "$CONFIG_FILE"; then
+            echo "::error file=$CONFIG_FILE::contact_links 설정이 올바르지 않습니다."
+            exit 1
+          fi
+
+          echo "모든 Issue Template 검증을 통과했습니다."
