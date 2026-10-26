@@ -12,6 +12,11 @@ assignees: ""
 ## 테스트 대상
 
 
+## 테스트 경로
+
+<!-- 테스트할 저장소 경로를 적습니다. 예: -->
+<!-- test-path: tests/test_example.py -->
+
 ## 테스트 환경
 
 - 브랜치 또는 Commit:
