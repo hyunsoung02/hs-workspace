@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -95,3 +96,32 @@ jobs:
           fi
 
           echo "모든 Issue Template 검증을 통과했습니다."
+
+      - name: 테스트 결과를 이슈에 기록
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            gh issue comment 6 \
+              --body "✅ 테스트 통과
+
+          - 실행 커밋: \`${{ github.sha }}\`
+          - 실행 링크: ${RUN_URL}"
+
+            gh issue edit 6 \
+              --add-label "test:passed" \
+              --remove-label "test:failed"
+          else
+            gh issue comment 6 \
+              --body "❌ 테스트 실패
+
+          - 실행 커밋: \`${{ github.sha }}\`
+          - 실행 링크: ${RUN_URL}
+          - Actions 로그에서 실패 원인을 확인하세요."
+
+            gh issue edit 6 \
+              --add-label "test:failed" \
+              --remove-label "test:passed"
+          fi
