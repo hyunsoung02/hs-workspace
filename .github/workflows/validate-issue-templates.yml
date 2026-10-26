@@ -1,5 +1,5 @@
 name: test 라벨 자동 검증
-run-name: 테스트 — ${{ github.event_name == 'issues' && github.event.issue.title || github.event_name == 'workflow_dispatch' && format('이슈 #{0}', inputs.issue_number) || github.sha }
+run-name: 테스트 — ${{ github.event_name == 'issues' && github.event.issue.title || github.event_name == 'workflow_dispatch' && format('이슈 #{0}', inputs.issue_number) || github.sha }}
 
 on:
   issues:
