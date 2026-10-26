@@ -1,5 +1,5 @@
 name: test 라벨 자동 검증
-run-name: ${{ github.event_name == 'issues' && format('{0} - Test 1 (자동 프로젝트 테스트)', github.event.issue.title) || github.event_name == 'workflow_dispatch' && format('이슈 {0} - Test 1 (자동 프로젝트 테스트)', inputs.issue_number) || format('Test 1 ({0})', github.sha) }}
+run-name: ${{ github.event_name == 'issues' && format('{0} - Test 1', github.event.issue.title) || format('이슈 {0} - Test 1', inputs.issue_number) }}
 
 on:
   issues:
@@ -69,13 +69,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          TEST_PATH=$(gh issue view "${ISSUE_NUMBER}" --json body --jq .body | grep -m1 '^<!-- test-path: ' | sed 's/^<!-- test-path: \(.*\) -->$/\1/' || true)
           if [ "${{ steps.run-test.outcome }}" = success ]; then
             gh issue edit "${ISSUE_NUMBER}" --add-label test:passed --remove-label test:failed
-            success_body=$(printf '%b' "✅ 테스트 통과\n\n- 저장소: ${{ github.repository }}\n- 실행 링크: ${RUN_URL}")
+            success_body=$(printf '%b' "✅ 테스트 통과\n\n- 테스트 대상: ${TEST_PATH:-미지정}\n- 저장소: ${{ github.repository }}\n- 실행 링크: ${RUN_URL}")
             gh issue comment "${ISSUE_NUMBER}" --body "${success_body}"
           else
             gh issue edit "${ISSUE_NUMBER}" --add-label test:failed --remove-label test:passed
-            failure_body=$(printf '%b' "❌ 테스트 실패\n\n- 저장소: ${{ github.repository }}\n- 실행 링크: ${RUN_URL}\n- 상세 원인: Actions 로그를 확인하세요.")
+            failure_body=$(printf '%b' "❌ 테스트 실패\n\n- 테스트 대상: ${TEST_PATH:-미지정}\n- 저장소: ${{ github.repository }}\n- 실행 링크: ${RUN_URL}\n- 상세 원인: Actions 로그를 확인하세요.")
             gh issue comment "${ISSUE_NUMBER}" --body "${failure_body}"
             gh issue edit "${ISSUE_NUMBER}" --remove-label test || true
             exit 1
