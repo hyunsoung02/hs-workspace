@@ -24,6 +24,7 @@ jobs:
     steps:
       - name: 저장소 코드 가져오기
         uses: actions/checkout@v6
+
       - name: 프로젝트 테스트 실행
         id: run-test
         env:
@@ -33,18 +34,23 @@ jobs:
         run: |
           set -euo pipefail
           BODY=$(gh issue view "${ISSUE_NUMBER}" --json body --jq .body)
-          TEST_PATH=$(printf '%s\\n' "${BODY}" | sed -n 's/^<!-- test-path: \\(.*\\) -->$/\\1/p' | head -n 1)
-          if [ -n "${TEST_PATH}" ]; then
-            case "${TEST_PATH}" in tests|tests/*) ;; *) echo "test-path는 tests 경로만 허용합니다."; exit 1 ;; esac
-            test -e "${TEST_PATH}"
-            python -m pip install --upgrade pip
-            python -m pip install pytest
-            pytest "${TEST_PATH}" 2>&1 | tee test-result.log
-          elif [ -d .github/ISSUE_TEMPLATE ]; then
-            test -d .github/ISSUE_TEMPLATE
-          else
-            echo '이슈에 <!-- test-path: tests/... --> 경로를 지정하세요.'; exit 1
+          TEST_PATH=$(printf '%s\n' "${BODY}" | grep -m1 '^<!-- test-path: ' | sed 's/^<!-- test-path: \(.*\) -->$/\1/' || true)
+
+          if [ -z "${TEST_PATH}" ]; then
+            echo '이슈에 실제 테스트 경로를 추가하세요. 예: <!-- test-path: tests/test_example.py -->'
+            exit 1
           fi
+
+          case "${TEST_PATH}" in
+            tests|tests/*) ;;
+            *) echo "test-path는 tests 경로만 허용합니다."; exit 1 ;;
+          esac
+
+          test -e "${TEST_PATH}"
+          python -m pip install --upgrade pip
+          python -m pip install pytest
+          pytest "${TEST_PATH}" 2>&1 | tee test-result.log
+
       - name: 결과 라벨 준비
         if: always()
         env:
@@ -53,6 +59,7 @@ jobs:
           gh label create test --color 1D76DB --description '테스트 실행 요청' --force || true
           gh label create test:passed --color 0E8A16 --description '테스트 통과' --force || true
           gh label create test:failed --color B60205 --description '테스트 실패' --force || true
+
       - name: 테스트 결과를 이슈에 기록
         if: always()
         env:
@@ -64,11 +71,11 @@ jobs:
           set -euo pipefail
           if [ "${{ steps.run-test.outcome }}" = success ]; then
             gh issue edit "${ISSUE_NUMBER}" --add-label test:passed --remove-label test:failed
-            success_body=$(printf '%b' "✅ 테스트 통과\\n\\n- 저장소: ${{ github.repository }}\\n- 실행 링크: ${RUN_URL}")
+            success_body=$(printf '%b' "✅ 테스트 통과\n\n- 저장소: ${{ github.repository }}\n- 실행 링크: ${RUN_URL}")
             gh issue comment "${ISSUE_NUMBER}" --body "${success_body}"
           else
             gh issue edit "${ISSUE_NUMBER}" --add-label test:failed --remove-label test:passed
-            failure_body=$(printf '%b' "❌ 테스트 실패\\n\\n- 저장소: ${{ github.repository }}\\n- 실행 링크: ${RUN_URL}\\n- 상세 원인: Actions 로그를 확인하세요.")
+            failure_body=$(printf '%b' "❌ 테스트 실패\n\n- 저장소: ${{ github.repository }}\n- 실행 링크: ${RUN_URL}\n- 상세 원인: Actions 로그를 확인하세요.")
             gh issue comment "${ISSUE_NUMBER}" --body "${failure_body}"
             gh issue edit "${ISSUE_NUMBER}" --remove-label test || true
             exit 1
