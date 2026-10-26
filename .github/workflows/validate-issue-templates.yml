@@ -4,6 +4,12 @@ on:
   issues:
     types:
       - labeled
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 결과를 기록할 이슈 번호
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -12,7 +18,7 @@ permissions:
 jobs:
   test:
     name: 프로젝트 테스트 실행
-    if: github.event.label.name == 'test'
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'test'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
 
@@ -22,17 +28,12 @@ jobs:
 
       - name: 프로젝트 테스트 실행
         id: run-test
-        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
 
           if [ -f "package.json" ]; then
-            if [ -f "package-lock.json" ]; then
-              npm ci
-            else
-              npm install
-            fi
+            if [ -f "package-lock.json" ]; then npm ci; else npm install; fi
             npm test 2>&1 | tee test-result.log
           elif [ -f "pyproject.toml" ] || [ -f "pytest.ini" ]; then
             python -m pip install --upgrade pip
@@ -40,33 +41,54 @@ jobs:
             pytest 2>&1 | tee test-result.log
           elif [ -f "go.mod" ]; then
             go test ./... 2>&1 | tee test-result.log
+          elif [ -d ".github/ISSUE_TEMPLATE" ]; then
+            files=(01-research.md 02-test.md 03-bug-report.md 04-documentation.md 05-professor-request.md)
+            for file in "${files[@]}"; do
+              path=".github/ISSUE_TEMPLATE/${file}"
+              test -f "${path}"
+              for key in name about title labels assignees; do grep -q "^${key}:" "${path}"; done
+              [ "$(grep -c '^---$' "${path}")" -ge 2 ]
+            done
+            test -f .github/ISSUE_TEMPLATE/config.yml
+            grep -qx 'blank_issues_enabled: false' .github/ISSUE_TEMPLATE/config.yml
+            grep -qx 'contact_links: \[\]' .github/ISSUE_TEMPLATE/config.yml
           else
             echo "지원되는 테스트 설정을 찾을 수 없습니다."
             exit 1
           fi
 
+      - name: 결과 라벨 준비
+        if: always()
+        env:
+          GH_TOKEN: ${{secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create test --color 1D76DB --description "테스트 실행 요청" --force || true
+          gh label create test:passed --color 0E8A16 --description "테스트 통과" --force || true
+          gh label create test:failed --color B60205 --description "테스트 실패" --force || true
+
       - name: 테스트 결과를 이슈에 기록
         if: always()
         env:
           GH_TOKEN: ${{secrets.GITHUB_TOKEN }}
-          ISSUE_NUMBER: ${{github.event.issue.number }}
+          ISSUE_NUMBER: ${{github.event_name == 'workflow_dispatch' && inputs.issue_number || github.event.issue.number }}
           RUN_URL: ${{github.server_url }}/${{github.repository }}/actions/runs/${{github.run_id }}
         shell: bash
         run: |
           set -euo pipefail
-
           if [ "${{steps.run-test.outcome }}" = "success" ]; then
+            gh issue edit "$ISSUE_NUMBER" --add-label "test:passed" --remove-label "test:failed"
             gh issue comment "$ISSUE_NUMBER" --body "✅ 테스트 통과
 
 - 저장소: ${{github.repository }}
 - 실행 링크: ${RUN_URL}"
-            gh issue edit "$ISSUE_NUMBER" --add-label "test:passed" --remove-label "test" --remove-label "test:failed"
+            gh issue edit "$ISSUE_NUMBER" --remove-label "test" || true
           else
+            gh issue edit "$ISSUE_NUMBER" --add-label "test:failed" --remove-label "test:passed"
             gh issue comment "$ISSUE_NUMBER" --body "❌ 테스트 실패
 
 - 저장소: ${{github.repository }}
 - 실행 링크: ${RUN_URL}
 - Actions 로그에서 실패 원인을 확인하세요."
-            gh issue edit "$ISSUE_NUMBER" --add-label "test:failed" --remove-label "test" --remove-label "test:passed"
+            gh issue edit "$ISSUE_NUMBER" --remove-label "test" || true
             exit 1
           fi
