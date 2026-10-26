@@ -1,5 +1,5 @@
 name: test 라벨 자동 검증
-run-name: ${{ github.event_name == 'issues' && format('{0} - Test 1', github.event.issue.title) || format('이슈 {0} - Test 1', inputs.issue_number) }}
+run-name: ${{ github.repository }} - ${{ github.event_name == 'issues' && format('{0} - Test 1', github.event.issue.title) || format('이슈 {0} - Test 1', inputs.issue_number) }}
 
 on:
   issues:
@@ -35,17 +35,14 @@ jobs:
           set -euo pipefail
           BODY=$(gh issue view "${ISSUE_NUMBER}" --json body --jq .body)
           TEST_PATH=$(printf '%s\n' "${BODY}" | grep -m1 '^<!-- test-path: ' | sed 's/^<!-- test-path: \(.*\) -->$/\1/' || true)
-
           if [ -z "${TEST_PATH}" ]; then
             echo '이슈에 실제 테스트 경로를 추가하세요. 예: <!-- test-path: tests/test_example.py -->'
             exit 1
           fi
-
           case "${TEST_PATH}" in
             tests|tests/*) ;;
             *) echo "test-path는 tests 경로만 허용합니다."; exit 1 ;;
           esac
-
           test -e "${TEST_PATH}"
           python -m pip install --upgrade pip
           python -m pip install pytest
