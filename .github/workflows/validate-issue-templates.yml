@@ -13,6 +13,10 @@ on:
       - ".github/ISSUE_TEMPLATE/**"
       - ".github/workflows/validate-issue-templates.yml"
 
+  issues:
+    types:
+      - labeled
+
   workflow_dispatch:
 
 permissions:
@@ -26,6 +30,7 @@ concurrency:
 jobs:
   validate:
     name: Template 구조 및 형식 검사
+    if: github.event_name != 'issues' || github.event.label.name == 'test'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
 
@@ -98,30 +103,34 @@ jobs:
           echo "모든 Issue Template 검증을 통과했습니다."
 
       - name: 테스트 결과를 이슈에 기록
-        if: always()
+        if: always() && github.event_name == 'issues'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           if [ "${{ job.status }}" = "success" ]; then
-            gh issue comment 6 \
+            gh issue comment "$ISSUE_NUMBER" \
               --body "✅ 테스트 통과
 
           - 실행 커밋: \`${{ github.sha }}\`
-          - 실행 링크: ${RUN_URL}"
+          - 실행 링크: ${RUN_URL}
+          - 검증 항목: Issue Template 구조 및 형식"
 
-            gh issue edit 6 \
+            gh issue edit "$ISSUE_NUMBER" \
               --add-label "test:passed" \
-              --remove-label "test:failed"
+              --remove-label "test" \
+              --remove-label "test:failed" || true
           else
-            gh issue comment 6 \
+            gh issue comment "$ISSUE_NUMBER" \
               --body "❌ 테스트 실패
 
           - 실행 커밋: \`${{ github.sha }}\`
           - 실행 링크: ${RUN_URL}
           - Actions 로그에서 실패 원인을 확인하세요."
 
-            gh issue edit 6 \
+            gh issue edit "$ISSUE_NUMBER" \
               --add-label "test:failed" \
-              --remove-label "test:passed"
+              --remove-label "test" \
+              --remove-label "test:passed" || true
           fi
