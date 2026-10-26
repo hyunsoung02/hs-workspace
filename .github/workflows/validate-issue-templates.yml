@@ -25,7 +25,7 @@ concurrency:
 jobs:
   validate:
     name: Template 구조 및 형식 검사
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
 
     steps:
