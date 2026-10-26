@@ -51,7 +51,7 @@ jobs:
             done
             test -f .github/ISSUE_TEMPLATE/config.yml
             grep -qx 'blank_issues_enabled: false' .github/ISSUE_TEMPLATE/config.yml
-            grep -qx 'contact_links: []' .github/ISSUE_TEMPLATE/config.yml
+            grep -qx 'contact_links: \[\]' .github/ISSUE_TEMPLATE/config.yml
           else
             echo '지원되는 테스트 설정을 찾을 수 없습니다.'
             exit 1
