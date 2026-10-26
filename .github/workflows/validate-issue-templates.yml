@@ -50,7 +50,7 @@ jobs:
             if [ -f package.json ]; then
               if [ -f package-lock.json ]; then npm ci; else npm install; fi
               npm test -- "${TEST_PATH}" 2>&1 | tee test-result.log
-            elif [ -f pyproject.toml ] || [ -f pytest.ini ]; then
+            elif { [ -f pyproject.toml ] || [ -f pytest.ini ]; } && [ ! -d .github/ISSUE_TEMPLATE ]; then
               python -m pip install --upgrade pip
               python -m pip install pytest
               pytest "${TEST_PATH}" 2>&1 | tee test-result.log
@@ -63,7 +63,7 @@ jobs:
           elif [ -f package.json ]; then
             if [ -f package-lock.json ]; then npm ci; else npm install; fi
             npm test 2>&1 | tee test-result.log
-          elif [ -f pyproject.toml ] || [ -f pytest.ini ]; then
+          elif { [ -f pyproject.toml ] || [ -f pytest.ini ]; } && [ ! -d .github/ISSUE_TEMPLATE ]; then
             python -m pip install --upgrade pip
             python -m pip install pytest
             pytest 2>&1 | tee test-result.log
