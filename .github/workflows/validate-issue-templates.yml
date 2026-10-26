@@ -25,7 +25,7 @@ jobs:
         continue-on-error: true
         shell: bash
         run: |
-          set -o pipefail
+          set -euo pipefail
 
           if [ -f "package.json" ]; then
             if [ -f "package-lock.json" ]; then
@@ -33,17 +33,13 @@ jobs:
             else
               npm install
             fi
-
             npm test 2>&1 | tee test-result.log
-
           elif [ -f "pyproject.toml" ] || [ -f "pytest.ini" ]; then
             python -m pip install --upgrade pip
             python -m pip install pytest
             pytest 2>&1 | tee test-result.log
-
           elif [ -f "go.mod" ]; then
             go test ./... 2>&1 | tee test-result.log
-
           else
             echo "지원되는 테스트 설정을 찾을 수 없습니다."
             exit 1
@@ -52,32 +48,25 @@ jobs:
       - name: 테스트 결과를 이슈에 기록
         if: always()
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GH_TOKEN: ${{secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{github.event.issue.number }}
+          RUN_URL: ${{github.server_url }}/${{github.repository }}/actions/runs/${{github.run_id }}
         shell: bash
         run: |
-          if [ "${{ steps.run-test.outcome }}" = "success" ]; then
-            gh issue comment "$ISSUE_NUMBER" \
-              --body "✅ 테스트 통과
+          set -euo pipefail
 
-          - 저장소: ${{ github.repository }}
-          - 실행 링크: ${RUN_URL}"
+          if [ "${{steps.run-test.outcome }}" = "success" ]; then
+            gh issue comment "$ISSUE_NUMBER" --body "✅ 테스트 통과
 
-            gh issue edit "$ISSUE_NUMBER" \
-              --add-label "test:passed" \
-              --remove-label "test" \
-              --remove-label "test:failed" || true
+- 저장소: ${{github.repository }}
+- 실행 링크: ${RUN_URL}"
+            gh issue edit "$ISSUE_NUMBER" --add-label "test:passed" --remove-label "test" --remove-label "test:failed"
           else
-            gh issue comment "$ISSUE_NUMBER" \
-              --body "❌ 테스트 실패
+            gh issue comment "$ISSUE_NUMBER" --body "❌ 테스트 실패
 
-          - 저장소: ${{ github.repository }}
-          - 실행 링크: ${RUN_URL}
-          - Actions 로그에서 실패 원인을 확인하세요."
-
-            gh issue edit "$ISSUE_NUMBER" \
-              --add-label "test:failed" \
-              --remove-label "test" \
-              --remove-label "test:passed" || true
+- 저장소: ${{github.repository }}
+- 실행 링크: ${RUN_URL}
+- Actions 로그에서 실패 원인을 확인하세요."
+            gh issue edit "$ISSUE_NUMBER" --add-label "test:failed" --remove-label "test" --remove-label "test:passed"
+            exit 1
           fi
