@@ -1,4 +1,4 @@
-name: hs-workspace_workflow
+name: 김현성 작업공간의 workflow
 run-name: ${{ github.repository }} - ${{ github.event_name == 'issues' && format('{0} - Test 1', github.event.issue.title) || format('이슈 {0} - Test 1', inputs.issue_number) }}
 
 on:
