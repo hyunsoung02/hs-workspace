@@ -21,6 +21,11 @@ assignees: ""
 ## 실제 결과
 
 
+## 테스트 경로 (선택)
+
+<!-- 수정 후 검증할 테스트 경로를 적습니다. 예: -->
+<!-- test-path: tests/test_example.py -->
+
 ## 실행 환경
 
 - 브랜치 또는 Commit:
