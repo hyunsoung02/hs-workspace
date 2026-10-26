@@ -64,10 +64,12 @@ jobs:
           set -euo pipefail
           if [ "${{ steps.run-test.outcome }}" = success ]; then
             gh issue edit "${ISSUE_NUMBER}" --add-label test:passed --remove-label test:failed
-            gh issue comment "${ISSUE_NUMBER}" --body "✅ 테스트 통과\\n\\n- 저장소: ${{ github.repository }}\\n- 실행 링크: ${RUN_URL}"
+            success_body=$(printf '%b' "✅ 테스트 통과\\n\\n- 저장소: ${{ github.repository }}\\n- 실행 링크: ${RUN_URL}")
+            gh issue comment "${ISSUE_NUMBER}" --body "${success_body}"
           else
             gh issue edit "${ISSUE_NUMBER}" --add-label test:failed --remove-label test:passed
-            gh issue comment "${ISSUE_NUMBER}" --body "❌ 테스트 실패\\n\\n- 저장소: ${{ github.repository }}\\n- 실행 링크: ${RUN_URL}\\n- 상세 원인: Actions 로그를 확인하세요."
+            failure_body=$(printf '%b' "❌ 테스트 실패\\n\\n- 저장소: ${{ github.repository }}\\n- 실행 링크: ${RUN_URL}\\n- 상세 원인: Actions 로그를 확인하세요.")
+            gh issue comment "${ISSUE_NUMBER}" --body "${failure_body}"
             gh issue edit "${ISSUE_NUMBER}" --remove-label test || true
             exit 1
           fi
