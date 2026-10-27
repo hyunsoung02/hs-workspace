@@ -1,13 +1,19 @@
-name: 김현성 작업공간의 workflow
-run-name: ${{ github.repository }} - ${{ github.event_name == 'issues' && format('{0} - Test 1', github.event.issue.title) || format('이슈 {0} - Test 1', inputs.issue_number) }}
+name: 이슈 지정 경로 자동 검증
+
+run-name: >-
+  ${{ github.event_name == 'issues'
+      && format('{0} - Test 1', github.event.issue.title)
+      || format('Issue #{0} - Test 1', inputs.issue_number) }}
 
 on:
   issues:
-    types: [labeled]
+    types:
+      - labeled
+
   workflow_dispatch:
     inputs:
       issue_number:
-        description: 결과를 기록할 이슈 번호
+        description: 결과를 기록할 Issue 번호
         required: true
         type: string
 
@@ -15,67 +21,271 @@ permissions:
   contents: read
   issues: write
 
+concurrency:
+  group: issue-test-${{ github.event.issue.number || inputs.issue_number }}
+  cancel-in-progress: true
+
 jobs:
-  test:
-    name: 프로젝트 테스트 실행
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'test' }}
+  validate:
+    name: 지정 파일 검사
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issues' && github.event.label.name == 'test')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+
     steps:
       - name: 저장소 코드 가져오기
         uses: actions/checkout@v6
 
-      - name: 프로젝트 테스트 실행
-        id: run-test
+      - name: Issue의 검사 경로 읽기 및 검증
+        id: validate
+        continue-on-error: true
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ISSUE_NUMBER: ${{ github.event_name == 'workflow_dispatch' && inputs.issue_number || github.event.issue.number }}
-        shell: bash
+          ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
         run: |
           set -euo pipefail
-          BODY=$(gh issue view "${ISSUE_NUMBER}" --json body --jq .body)
-          TEST_PATH=$(printf '%s\n' "${BODY}" | grep -m1 '^<!-- test-path: ' | sed 's/^<!-- test-path: \(.*\) -->$/\1/' || true)
-          if [ -z "${TEST_PATH}" ]; then
-            echo '이슈에 실제 테스트 경로를 추가하세요. 예: <!-- test-path: tests/test_example.py -->'
-            exit 1
-          fi
-          case "${TEST_PATH}" in
-            tests|tests/*) ;;
-            *) echo "test-path는 tests 경로만 허용합니다."; exit 1 ;;
-          esac
-          test -e "${TEST_PATH}"
-          python -m pip install --upgrade pip
-          python -m pip install pytest
-          pytest "${TEST_PATH}" 2>&1 | tee test-result.log
 
-      - name: 결과 라벨 준비
-        if: always()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh label create test --color 1D76DB --description '테스트 실행 요청' --force || true
-          gh label create test:passed --color 0E8A16 --description '테스트 통과' --force || true
-          gh label create test:failed --color B60205 --description '테스트 실패' --force || true
+          gh issue view "$ISSUE_NUMBER" \
+            --repo "$GITHUB_REPOSITORY" \
+            --json body \
+            --jq '.body // ""' > "$RUNNER_TEMP/issue-body.md"
 
-      - name: 테스트 결과를 이슈에 기록
-        if: always()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ISSUE_NUMBER: ${{ github.event_name == 'workflow_dispatch' && inputs.issue_number || github.event.issue.number }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          TEST_PATH=$(gh issue view "${ISSUE_NUMBER}" --json body --jq .body | grep -m1 '^<!-- test-path: ' | sed 's/^<!-- test-path: \(.*\) -->$/\1/' || true)
-          if [ "${{ steps.run-test.outcome }}" = success ]; then
-            gh issue edit "${ISSUE_NUMBER}" --add-label test:passed --remove-label test:failed
-            success_body=$(printf '%b' "✅ 테스트 통과\n\n- 테스트 대상: ${TEST_PATH:-미지정}\n- 저장소: ${{ github.repository }}\n- 실행 링크: ${RUN_URL}")
-            gh issue comment "${ISSUE_NUMBER}" --body "${success_body}"
+          TARGET_PATH="$(
+            python - "$RUNNER_TEMP/issue-body.md" <<'PY'
+          import re
+          import sys
+          from pathlib import Path
+
+          body = Path(sys.argv[1]).read_text(encoding="utf-8")
+          match = re.search(
+              r"<!--\s*test-target:\s*([^<>\r\n]+?)\s*-->",
+              body,
+              re.IGNORECASE,
+          )
+
+          if not match:
+              raise SystemExit(
+                  "Issue 본문에 <!-- test-target: 저장소/내부/경로 -->가 없습니다."
+              )
+
+          target = match.group(1).strip()
+
+          if not target:
+              raise SystemExit("test-target 경로가 비어 있습니다.")
+
+          if "\\" in target:
+              raise SystemExit("경로 구분자는 /를 사용해야 합니다.")
+
+          path = Path(target)
+
+          if path.is_absolute() or ".." in path.parts:
+              raise SystemExit("저장소 외부 경로는 사용할 수 없습니다.")
+
+          print(path.as_posix())
+          PY
+          )"
+
+          echo "target=$TARGET_PATH" >> "$GITHUB_OUTPUT"
+
+          ABS_TARGET="$(
+            python - "$GITHUB_WORKSPACE" "$TARGET_PATH" <<'PY'
+          import sys
+          from pathlib import Path
+
+          root = Path(sys.argv[1]).resolve()
+          target = (root / sys.argv[2]).resolve(strict=True)
+
+          try:
+              target.relative_to(root)
+          except ValueError:
+              raise SystemExit("검사 경로가 저장소 외부를 가리킵니다.")
+
+          print(target)
+          PY
+          )"
+
+          validate_file() {
+            local file="$1"
+            local relative="${file#"$GITHUB_WORKSPACE/"}"
+
+            echo "검사 중: $relative"
+
+            if [ ! -s "$file" ]; then
+              echo "::error file=$relative::파일이 비어 있습니다."
+              return 1
+            fi
+
+            case "$file" in
+              *.yml|*.yaml)
+                ruby - "$file" <<'RUBY'
+          require "yaml"
+
+          path = ARGV[0]
+          data = YAML.safe_load(File.read(path), aliases: true)
+
+          abort "#{path}: YAML 최상위 구조는 객체여야 합니다." unless data.is_a?(Hash)
+
+          if path.include?("/.github/workflows/")
+            abort "#{path}: jobs 항목이 없습니다." unless data.key?("jobs")
+          end
+          RUBY
+                ;;
+
+              *.json)
+                python -m json.tool "$file" > /dev/null
+                ;;
+
+              *.py)
+                python -m py_compile "$file"
+
+                if [[ "$relative" == tests/* ]] &&
+                   [[ "$(basename "$file")" == test_*.py ]]; then
+                  python -c "import pytest" 2>/dev/null ||
+                    python -m pip install --quiet pytest
+                  python -m pytest "$file"
+                fi
+                ;;
+
+              *.sh)
+                bash -n "$file"
+                ;;
+
+              *.js|*.mjs|*.cjs)
+                node --check "$file"
+                ;;
+
+              *.md)
+                if [[ "$relative" == .github/ISSUE_TEMPLATE/*.md ]]; then
+                  if [ "$(grep -c '^---$' "$file")" -lt 2 ]; then
+                    echo "::error file=$relative::YAML front matter 구분자가 부족합니다."
+                    return 1
+                  fi
+
+                  for key in name about title labels assignees; do
+                    if ! grep -q "^${key}:" "$file"; then
+                      echo "::error file=$relative::${key} 항목이 없습니다."
+                      return 1
+                    fi
+                  done
+                fi
+                ;;
+
+              *)
+                echo "기본 검사 적용: 파일 존재 여부와 빈 파일 여부"
+                ;;
+            esac
+          }
+
+          if [ -f "$ABS_TARGET" ]; then
+            validate_file "$ABS_TARGET"
+          elif [ -d "$ABS_TARGET" ]; then
+            mapfile -d '' files < <(
+              find "$ABS_TARGET" \
+                -type f \
+                ! -path '*/.git/*' \
+                ! -path '*/node_modules/*' \
+                ! -path '*/.venv/*' \
+                -print0
+            )
+
+            if [ "${#files[@]}" -eq 0 ]; then
+              echo "::error::검사할 파일이 없습니다."
+              exit 1
+            fi
+
+            if [ "${#files[@]}" -gt 500 ]; then
+              echo "::error::한 번에 검사할 수 있는 파일은 최대 500개입니다."
+              exit 1
+            fi
+
+            for file in "${files[@]}"; do
+              validate_file "$file"
+            done
           else
-            gh issue edit "${ISSUE_NUMBER}" --add-label test:failed --remove-label test:passed
-            failure_body=$(printf '%b' "❌ 테스트 실패\n\n- 테스트 대상: ${TEST_PATH:-미지정}\n- 저장소: ${{ github.repository }}\n- 실행 링크: ${RUN_URL}\n- 상세 원인: Actions 로그를 확인하세요.")
-            gh issue comment "${ISSUE_NUMBER}" --body "${failure_body}"
-            gh issue edit "${ISSUE_NUMBER}" --remove-label test || true
+            echo "::error::지정한 경로가 파일 또는 폴더가 아닙니다."
             exit 1
           fi
-          gh issue edit "${ISSUE_NUMBER}" --remove-label test || true
+
+          echo "지정한 경로의 검증을 통과했습니다."
+
+      - name: 검사 결과를 Issue에 기록
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
+          TEST_RESULT: ${{ steps.validate.outcome }}
+          TEST_TARGET: ${{ steps.validate.outputs.target }}
+          RUN_URL: >-
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          gh label create "test:passed" \
+            --repo "$GITHUB_REPOSITORY" \
+            --color "1F883D" \
+            --description "자동 검증 통과" \
+            --force > /dev/null
+
+          gh label create "test:failed" \
+            --repo "$GITHUB_REPOSITORY" \
+            --color "D1242F" \
+            --description "자동 검증 실패" \
+            --force > /dev/null
+
+          TARGET="${TEST_TARGET:-경로를 읽지 못함}"
+
+          if [ "$TEST_RESULT" = "success" ]; then
+            {
+              echo "## ✅ 테스트 통과"
+              echo
+              echo "- 검사 대상: \`$TARGET\`"
+              echo "- 실행 커밋: \`${GITHUB_SHA}\`"
+              echo "- 실행 결과: [GitHub Actions 로그]($RUN_URL)"
+            } > "$RUNNER_TEMP/result.md"
+
+            gh issue comment "$ISSUE_NUMBER" \
+              --repo "$GITHUB_REPOSITORY" \
+              --body-file "$RUNNER_TEMP/result.md"
+
+            gh issue edit "$ISSUE_NUMBER" \
+              --repo "$GITHUB_REPOSITORY" \
+              --add-label "test:passed"
+
+            gh issue edit "$ISSUE_NUMBER" \
+              --repo "$GITHUB_REPOSITORY" \
+              --remove-label "test:failed" 2>/dev/null || true
+          else
+            {
+              echo "## ❌ 테스트 실패"
+              echo
+              echo "- 검사 대상: \`$TARGET\`"
+              echo "- 실행 커밋: \`${GITHUB_SHA}\`"
+              echo "- 실패 원인: Actions 로그에서 실패한 검사 항목을 확인하세요."
+              echo "- 실행 결과: [GitHub Actions 로그]($RUN_URL)"
+            } > "$RUNNER_TEMP/result.md"
+
+            gh issue comment "$ISSUE_NUMBER" \
+              --repo "$GITHUB_REPOSITORY" \
+              --body-file "$RUNNER_TEMP/result.md"
+
+            gh issue edit "$ISSUE_NUMBER" \
+              --repo "$GITHUB_REPOSITORY" \
+              --add-label "test:failed"
+
+            gh issue edit "$ISSUE_NUMBER" \
+              --repo "$GITHUB_REPOSITORY" \
+              --remove-label "test:passed" 2>/dev/null || true
+          fi
+
+          gh issue edit "$ISSUE_NUMBER" \
+            --repo "$GITHUB_REPOSITORY" \
+            --remove-label "test" 2>/dev/null || true
+
+      - name: 실패 상태 반영
+        if: steps.validate.outcome != 'success'
+        shell: bash
+        run: exit 1
