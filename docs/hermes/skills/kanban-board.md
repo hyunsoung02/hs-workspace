@@ -1,21 +1,19 @@
 # Hermes Kanban Board 기반 멀티 에이전트 협업 구조
 
-## 1. 문서 목적
-
-이 문서는 연구실 구성원이 다음 내용을 쉽게 이해할 수 있도록 정리한 입문 자료이다.
-
-- 기존 Hermes Delegate Task 방식의 작업 흐름
-- Hermes Kanban Board 방식의 작업 흐름
-- Board, Task, Link, Comment, Workspace, Dispatcher의 역할
-- Delegate Task와 Kanban Board의 차이
-- Hermes Kanban Board와 GitHub Projects의 차이
-- 두 도구를 연구실 업무에 함께 활용하는 방법
+연구실 구성원을 위한 입문 자료입니다. Hermes Delegate Task와 Kanban Board의 작업 흐름을 비교하고, Kanban Board를 GitHub Projects와 함께 사용하는 방법을 설명합니다.
 
 > [!IMPORTANT]
 > **Hermes Kanban Board와 GitHub Projects는 서로 다른 도구이다.**
 > Hermes Kanban Board는 AI 에이전트의 실행과 인수인계를 관리하고, GitHub Projects는 연구실 구성원의 업무·일정·이슈 현황을 공유한다.
 
-## 2. 한눈에 보는 핵심 차이
+## 문서 목차
+
+- [작업 방식 비교](#1-한눈에-보는-핵심-차이)
+- [Delegate Task](#2-기존-delegate-task-방식)와 [Kanban Board](#3-hermes-kanban-board-방식)
+- [구성요소](#4-kanban-board-핵심-구성요소)와 [역할](#5-작업을-움직이는-세-가지-역할)
+- [GitHub Projects 연계](#7-hermes-kanban-board와-github-projects), [운영 규칙](#8-운영-시-권장-규칙), [확인할 사항](#9-교수님께-확인할-사항)
+
+## 1. 한눈에 보는 핵심 차이
 
 | 구분 | 기존 Delegate Task | Hermes Kanban Board | GitHub Projects |
 |---|---|---|---|
@@ -25,7 +23,7 @@
 | 상태 기록 | 메인 에이전트가 결과 회수 | Task 상태와 Comment에 보존 | Status, Assignee, Priority, Milestone 등에 보존 |
 | 적합한 용도 | 짧고 명확한 작업 위임 | 장시간·다단계 AI 협업 | 연구실 전체 현황 공유와 위클리 회의 |
 
-## 3. 기존 Delegate Task 방식
+## 2. 기존 Delegate Task 방식
 
 기존 Delegate Task 방식에서는 메인 에이전트가 전체 작업을 진행하다가 일부 작업을 임시 서브 에이전트에게 맡긴다. 서브 에이전트가 결과를 반환하면 메인 에이전트가 이를 이어받아 최종 결과물을 완성한다.
 
@@ -53,7 +51,7 @@ flowchart TD
 - 장기간 유지되는 역할, 작업 이력, 의존성 및 재시도 상태를 체계적으로 관리하기에는 불편할 수 있다.
 - 병렬 실행 가능 여부와 범위는 사용하는 Hermes 버전과 실행 환경에 따라 달라질 수 있다.
 
-## 4. Hermes Kanban Board 방식
+## 3. Hermes Kanban Board 방식
 
 Hermes Kanban Board 방식에서는 특정 에이전트가 아니라 **Board에 저장된 Task와 기록**이 작업의 중심이 된다. Orchestrator가 목표를 Task로 나누고, Dispatcher가 실행 가능한 작업을 찾아 Worker에게 전달한다. Worker는 결과와 인수인계 내용을 Task에 기록한다.
 
@@ -96,7 +94,7 @@ Worker 프로필은 역할에 필요한 메모리와 스킬을 갖도록 구성�
 
 프로필 이름과 역할은 고정 규칙이 아니며 실제 팀 구성과 작업 목적에 맞게 정한다.
 
-## 5. Kanban Board 핵심 구성요소
+## 4. Kanban Board 핵심 구성요소
 
 ### 5.1 Board
 
@@ -185,7 +183,7 @@ Dispatcher는 AI가 아니라 설정된 규칙을 실행하는 작업 관리 엔
 
 확인 주기는 환경 설정에 따라 달라질 수 있으므로 특정 시간 간격을 고정값으로 가정하지 않는다.
 
-## 6. 작업을 움직이는 세 가지 역할
+## 5. 작업을 움직이는 세 가지 역할
 
 | 역할 | 주체 | 책임 |
 |---|---|---|
@@ -215,7 +213,7 @@ Dispatcher는 AI가 아니라 설정된 규칙을 실행하는 작업 관리 엔
 - 부모 Task 완료 후 자식 Task의 실행 가능 여부를 갱신한다.
 - 재시도·실행 제한·차단 조건을 적용한다.
 
-## 7. Delegate Task와 Kanban Board 비교
+## 6. Delegate Task와 Kanban Board 비교
 
 | 구분 | Delegate Task | Hermes Kanban Board |
 |---|---|---|
@@ -231,7 +229,7 @@ Dispatcher는 AI가 아니라 설정된 규칙을 실행하는 작업 관리 엔
 
 두 방식은 경쟁 관계가 아니다. 짧고 독립적인 작업은 Delegate Task가 간단하고, 여러 단계와 역할이 필요한 작업은 Kanban Board가 적합하다.
 
-## 8. Hermes Kanban Board와 GitHub Projects
+## 7. Hermes Kanban Board와 GitHub Projects
 
 두 도구는 모두 보드 형태를 사용하지만 관리 대상이 다르다.
 
@@ -260,7 +258,7 @@ GitHub Projects: 무엇을 누가 언제까지 하는가
 Hermes Kanban: 그 일을 AI 에이전트들이 어떻게 나누어 실행하는가
 ```
 
-## 9. 운영 시 권장 규칙
+## 8. 운영 시 권장 규칙
 
 - 모든 Task에는 담당 프로필과 완료 조건을 작성한다.
 - 작업 결과는 Scratch에만 두지 않고 Repository 또는 공유 Workspace에 저장한다.
@@ -269,7 +267,7 @@ Hermes Kanban: 그 일을 AI 에이전트들이 어떻게 나누어 실행하는
 - 자동 재시도만으로 해결할 수 없는 인증, 권한, 비용 또는 의사결정 문제는 사용자에게 전달한다.
 - GitHub Projects에는 AI의 모든 세부 실행 Task를 복사하지 않고, 사람이 확인해야 하는 업무와 결과만 반영한다.
 
-## 10. 교수님께 확인할 사항
+## 9. 교수님께 확인할 사항
 
 요구사항의 **“모든 프로젝트는 GitHub Repo를 생성하여 관리”**가 어느 운영 방식을 의미하는지 확인이 필요하다.
 
@@ -282,7 +280,7 @@ Hermes Kanban: 그 일을 AI 에이전트들이 어떻게 나누어 실행하는
 
 이 사항이 확정되기 전에는 특정 방식을 연구실 표준으로 단정하지 않는다.
 
-## 11. 핵심 정리
+## 10. 핵심 정리
 
 1. Delegate Task는 메인 에이전트가 임시 서브 에이전트에게 일부 작업을 맡기는 방식이다.
 2. Hermes Kanban Board는 Board와 Task를 중심으로 여러 Worker의 실행 상태와 인수인계를 관리한다.

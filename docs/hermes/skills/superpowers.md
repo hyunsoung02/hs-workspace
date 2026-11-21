@@ -2,6 +2,11 @@
 
 이 문서는 공용 `worker03` 서버에서 `hyunsoung` Hermes 프로필에 Superpowers를 설치하면서 발생한 문제와 해결 과정을 정리한 기록입니다.
 
+- [플러그인 설치](#1-플러그인-설치)
+- [스킬 목록에 나타나지 않을 때](#2-스킬이-목록에-나타나지-않을-때)
+- [슬래시 명령에 접두어 붙이기](#3-슬래시-명령에-접두어-붙이기)
+- [적용 범위](#4-적용-범위)와 [최종 확인](#5-최종-확인)
+
 ## 1. 플러그인 설치
 
 서버 터미널에서 사용할 프로필을 명시해 설치합니다.
@@ -16,7 +21,7 @@ hermes --profile hyunsoung plugins install obra/superpowers --enable
 hermes --profile hyunsoung
 ```
 
-## 2. 문제: Superpowers 스킬이 목록에 나타나지 않음
+## 2. 스킬이 목록에 나타나지 않을 때
 
 ### 증상
 
@@ -50,7 +55,7 @@ Hermes를 다시 실행하거나 현재 대화에서 스킬 목록을 새로 불
 
 `/reload`는 `.env` 환경변수만 다시 읽는 명령이므로 스킬 갱신에는 `/reload-skills`를 사용합니다.
 
-## 3. 문제: 원하는 슬래시 명령 형식과 다름
+## 3. 슬래시 명령에 접두어 붙이기
 
 Hermes의 기본 스킬 명령은 스킬 이름을 그대로 사용합니다.
 
@@ -76,17 +81,7 @@ hermes --profile hyunsoung bundles create superpowers-brainstorming \
   --description '구현 전 아이디어·요구사항을 질문으로 정리하고 설계에 합의합니다.'
 ```
 
-연결 구조는 다음과 같습니다.
-
-```text
-/superpowers-brainstorming
-        ↓
-Hermes 스킬 번들
-        ↓
-superpowers:brainstorming 원본 스킬
-```
-
-따라서 `/brainstorming`의 이름을 바꾼 것이 아닙니다. 같은 원본 스킬을 불러오는 `/superpowers-brainstorming` 명령을 추가한 것입니다.
+`/superpowers-brainstorming`은 Hermes 스킬 번들을 통해 원본 `superpowers:brainstorming` 스킬을 불러옵니다. 기존 `/brainstorming` 명령도 사용할 수 있습니다.
 
 ## 4. 적용 범위
 

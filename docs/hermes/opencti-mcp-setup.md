@@ -1,17 +1,17 @@
 # OpenCTI와 Hermes MCP 시연 환경 구축 기록
 
-- 작업일 2026년 11월 8일
-- 환경 연구실 시연 서버 `worker03`, Orca의 터미널과 브라우저, Hermes Agent
-- 목표 공개 CTI를 OpenCTI에 적재하고, Hermes에서 기존 `opencti-mcp`를 통해 위협 객체와 관계를 읽기 전용으로 조회한다.
-- 현재 상태 OpenCTI 설치·기동, 웹 로그인, 대시보드의 위협 데이터 표시까지 확인했다. Hermes의 MCP 조회와 APT29의 상세 관계는 검증 대기다.
+| 항목 | 내용 |
+| --- | --- |
+| 작업일 | 2026년 11월 8일 |
+| 환경 | 연구실 시연 서버 `worker03`, Orca 터미널과 브라우저, Hermes Agent |
+| 목표 | 공개 CTI를 OpenCTI에 적재하고, Hermes에서 `opencti-mcp`로 위협 객체와 관계를 읽기 전용으로 조회 |
+| 확인 완료 | OpenCTI 설치·기동, 웹 로그인, 대시보드 데이터 표시 |
+| 검증 대기 | Hermes MCP 조회, APT29 상세 관계 |
+
 
 ## 1. 시연 구성과 선택 이유
 
-~~~text
-공개 MITRE ATT&CK 데이터 → OpenCTI
-                             ↑ GraphQL 조회
-Orca의 Hermes ── MCP ──→ opencti-mcp
-~~~
+OpenCTI에 공개 MITRE ATT&CK 데이터를 적재한다. Orca에서 실행한 Hermes는 `opencti-mcp`에 MCP 요청을 보내고, `opencti-mcp`는 OpenCTI의 GraphQL API로 데이터를 조회한다.
 
 OpenCTI는 위협 객체와 관계를 저장한다. 커뮤니티 `opencti-mcp`는 Hermes에 OpenCTI 조회 도구를 제공한다. Orca에서 사용하는 Superpowers는 설계·작업 순서·검증을 위한 개발 스킬이다. 첫 시연은 기존 MCP 서버로 실제 조회를 확인하고, 자체 CTI 조회 스킬은 필요할 때 같은 질문으로 적용 전후를 비교하는 범위로 잡았다. [OpenCTI MCP 패키지](https://pypi.org/project/opencti-mcp/) · [Superpowers 사용 환경](skills/superpowers.md)
 
